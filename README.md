@@ -25,6 +25,9 @@ This project is an updated and modernized version (ES6 Async/Await) of the origi
 7.  Paste it into the console and press **Enter**.
 8.  Wait for the calculation to finish!
 
+<img width="420" height="117" alt="image" src="https://github.com/user-attachments/assets/ec45e98b-9b22-4ba8-bb4f-3befc04af3a9" />
+
+
 ## ⚠️ Disclaimer
 
 This script is for **educational purposes only**. It is not affiliated with, endorsed by, or connected to Shopee. Use this script at your own risk.
