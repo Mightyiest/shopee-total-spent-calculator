@@ -1,42 +1,89 @@
-# 🛒 Shopee Total Spent Calculator
+(async function () {
+    /**
+     * SHOPEE TOTAL SPENT CALCULATOR
+     * * Instructions:
+     * 1. Go to https://shopee.ph/user/purchase/ (or your local region)
+     * 2. Open Developer Tools (F12) -> Console
+     * 3. Paste this script and hit Enter
+     */
 
-A simple, safe, and efficient JavaScript snippet to calculate your total spending history on Shopee.
+    // --- CONFIGURATION ---
+    const DELAY_MS = 500; // Delay in ms to avoid rate limiting
+    const DIVISOR = 100000; // Shopee currency divisor
+    
+    var total = 0;
+    var orderCount = 0;
+    var offset = 0;
+    var hasMore = true;
 
-This project is an updated and modernized version (ES6 Async/Await) of the original script by **[epool86](https://github.com/epool86/calculateshopee)**.
+    // Helper for sleep
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-## 🚀 Features
+    // Auto-detect currency symbol based on domain
+    const domain = window.location.origin;
+    let currencyLocale = 'en-PH'; // Default to PH
+    let currencyCode = 'PHP';
 
-* **Safe & Private:** No data is sent to external servers. Everything runs locally in your browser.
-* **Async & Rate Limited:** Includes delays between requests to prevent Shopee from blocking your connection (Anti-429).
-* **Dynamic Currency:** Automatically formats currency based on your locale (e.g., ₱ for PH, RM for MY).
-* **Detailed Logs:** Detailed console logs showing individual items and prices.
+    if (domain.includes('.my')) { currencyLocale = 'en-MY'; currencyCode = 'MYR'; }
+    if (domain.includes('.sg')) { currencyLocale = 'en-SG'; currencyCode = 'SGD'; }
+    if (domain.includes('.vn')) { currencyLocale = 'vi-VN'; currencyCode = 'VND'; }
+    
+    console.log(`%c 🚀 STARTING SHOPEE CALCULATOR (${currencyCode})...`, "color: orange; font-weight: bold; font-size: 14px;");
 
-## 📋 How to Use
+    try {
+        while (hasMore) {
+            const url = `${domain}/api/v4/order/get_order_list?limit=20&list_type=3&offset=${offset}`;
+            const response = await fetch(url);
+            
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-1.  Login to your Shopee account on your desktop browser.
-2.  Navigate to the **[My Purchase](https://shopee.ph/user/purchase/)** page.
-    * PH: `shopee.ph/user/purchase/`
-    * MY: `shopee.com.my/user/purchase/`
-    * SG: `shopee.sg/user/purchase/`
-3.  Press **F12** (or `Right Click` > `Inspect`) to open Developer Tools.
-4.  Click on the **Console** tab.
-5.  **Important:** If you see a warning, type `allow pasting` and hit Enter. This is a browser security feature.
-6.  Copy the code from `script.js` in this repository.
-7.  Paste it into the console and press **Enter**.
-8.  Wait for the calculation to finish!
+            const body = await response.json();
 
-## ⚠️ Disclaimer
+            if (body.data && body.data.details_list) {
+                const orders = body.data.details_list;
 
-This script is for **educational purposes only**. It is not affiliated with, endorsed by, or connected to Shopee. Use this script at your own risk.
+                if (orders.length === 0) { hasMore = false; break; }
 
-## 🔒 Privacy
+                for (let order of orders) {
+                    let amount = order.info_card.final_total / DIVISOR;
+                    
+                    // Safe extraction of item name
+                    let itemName = "Unknown Item";
+                    try {
+                        itemName = order.info_card.order_list_cards[0].product_info.item_groups[0].items[0].name;
+                    } catch (e) {
+                        itemName = "Bundle/Multiple Items";
+                    }
 
-This script **does not** collect your password, credit card info, or personal data. It only reads the "Order History" visible on your screen and sums the numbers. You can audit the code in `script.js` to verify this.
+                    total += amount;
+                    orderCount++;
 
-## 🤝 Credits
+                    console.log(`${orderCount}: ${amount.toFixed(2)} - ${itemName.substring(0, 50)}...`);
+                }
 
-* Based on the original work by [epool86/calculateshopee](https://github.com/epool86/calculateshopee).
+                offset = body.data.next_offset;
+                if (offset < 0 || !offset) hasMore = false;
 
-## 📜 License
+                await sleep(DELAY_MS); // Politeness delay
+            } else {
+                hasMore = false;
+            }
+        }
 
-MIT License
+        // Formatter
+        const formatter = new Intl.NumberFormat(currencyLocale, {
+            style: 'currency',
+            currency: currencyCode,
+        });
+
+        console.log('------------------------------------------------');
+        console.log("%c ✅ CALCULATION COMPLETED!", "color: green; font-weight: bold; font-size: 16px;");
+        console.log(`%c 💰 GRAND TOTAL: ${formatter.format(total)}`, "color: green; font-weight: bold; font-size: 18px;");
+        console.log(`📦 Total Orders: ${orderCount}`);
+        console.log('------------------------------------------------');
+
+    } catch (error) {
+        console.error("❌ An error occurred:", error);
+        console.log("Tip: Make sure you are logged in and on the 'My Purchase' page.");
+    }
+})();
